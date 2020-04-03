@@ -39,4 +39,42 @@ spec:
 """
 }
   }
+stages {
+    stage('Test') {
+      steps {
+        container('maven') {
+          sh """
+             #mvn clean install -Dskiptests
+          """
+        }
+      }
+    }
+    stage('Build and push image with Container Builder') {
+      steps {
+        container('gcloud') {
+          sh "gcloud auth list" 
+          sh "mkdir app.jar"
+          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${IMAGE_TAG} ."
+        }
+      }
+    }
+    stage('Deploy ') {
+      steps {
+        container('helm') {
+          sh """
+          helm ls
+          gcloud container clusters get-credentials jenkins --zone us-central1-c --project pro1-265115
+          kubectl get pods --namespace default
+          helm repo add stable https://kubernetes-charts.storage.googleapis.com/ 
+          helm repo update  
+          helm install stable/locust / --namespace default
+          helm ls
+          kubectl get pods --namespace default
+          """ 
+        }
+      }
+    }
+    
+  }
+}
 
